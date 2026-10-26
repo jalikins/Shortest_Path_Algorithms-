@@ -5,7 +5,9 @@ from tkinter import *
 from tkinter import ttk
 import os
 
-# Grid Node Class 
+from algorithm_Dijkstra import run_search
+
+# Grid Node Class (GRAPH INFO)
 class spot:
     def __init__(self, x, y):
         self.i = x
@@ -47,7 +49,8 @@ green = (0, 255, 0)
 blue = (0, 0, 255)
 grey = (220, 220, 220)
 white = (255, 255, 255)
-purple = (255, 8, 127)
+pink = (255, 8, 127)
+orange = (255, 165, 0)
 
 # Grid Initialization
 grid = [[spot(i, j) for j in range(row)] for i in range(cols)]
@@ -88,34 +91,79 @@ pygame.display.set_caption("Pathfinding Algorithm Sandbox")
 # Draw initial empty grid
 for i in range(cols):
     for j in range(row):
-        grid[i][j].show(white, 1)
+        pygame.draw.rect(screen, white, (i * w, j * h, w, h), 1)
 
 # Draw boundaries
 for i in range(0, row):
-    grid[0][i].show(grey, 0)
     grid[0][i].obs = True
-    grid[cols-1][i].show(grey, 0)
+    pygame.draw.rect(screen, grey, (0 * w, i * h, w, h), 0)
+    
     grid[cols-1][i].obs = True
-    grid[i][row-1].show(grey, 0)
+    pygame.draw.rect(screen, grey, ((cols-1) * w, i * h, w, h), 0)
+    
     grid[i][row-1].obs = True
-    grid[i][0].show(grey, 0)
+    pygame.draw.rect(screen, grey, (i * w, (row-1) * h, w, h), 0)
+    
     grid[i][0].obs = True
+    pygame.draw.rect(screen, grey, (i * w, 0 * h, w, h), 0)
 
+
+def save_map(filename="saved_map.txt"):
+    with open(filename, "w") as f:
+        # Loop through rows (y) then columns (x) so the text file matches the screen visually
+        for j in range(row):
+            line = ""
+            for i in range(cols):
+                if grid[i][j].obs:
+                    line += "1"
+                else:
+                    line += "0"
+            f.write(line + "\n")
+    print(f"Map saved to {filename}")
+
+def load_map(filename="saved_map.txt"):
+    if not os.path.exists(filename):
+        print("No saved map found!")
+        return
+        
+    with open(filename, "r") as f:
+        lines = f.readlines()
+        for j, line in enumerate(lines):
+            line = line.strip()
+            # Stop if the text file doesn't match 
+            if j >= row: break 
+            
+            for i, char in enumerate(line):
+                if i >= cols: break
+                
+                # Apply walls
+                acess = grid[i][j]
+                if char == "1" and acess != start and acess != end:
+                    acess.obs = True
+                    acess.show(grey, 0)
+    print(f"Map loaded from {filename}")
+
+    
 # PyGame Drawing Phase 
-def mousePress(pos):
+def mousePress(pos, button_type):
     t, w_m = pos
     g1 = int(t // (800 / cols))
     g2 = int(w_m // (800 / row))
     acess = grid[g1][g2]
     if acess != start and acess != end:
-        if not acess.obs:
+        if button_type == "left" and not acess.obs:
             acess.obs = True
             acess.show(grey, 0) # Draw wall
+        elif button_type == "right" and not acess.obs:
+            acess.value = 2 # Set weight to 2
+            acess.show(orange, 0) # Draw orange weight
 
-end.show(purple, 0)
-start.show(purple, 0)
+end.show(pink, 0)
+start.show(pink, 0)
 
-print("Click and drag to draw walls. Press SPACE to start the algorithm.")
+
+print("Commands: Left Click to draw walls. Right Click to draw weights.")
+print("'S' to Save. 'L' to Load. SPACE to start.")
 
 drawing = True
 while drawing:
@@ -123,22 +171,31 @@ while drawing:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+            
+        # Left click draws walls
         if pygame.mouse.get_pressed()[0]:
-            mousePress(pygame.mouse.get_pos())
+            mousePress(pygame.mouse.get_pos(), "left")
+            
+        # Right click draws weights
+        if pygame.mouse.get_pressed()[2]:
+            mousePress(pygame.mouse.get_pos(), "right")
+            
+        # Keyboard commands
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                drawing = False
+                drawing = False  
+            elif event.key == pygame.K_s:
+                save_map()       
+            elif event.key == pygame.K_l:
+                load_map()
 
 # Once drawing is done, calculate neighbors for all open spaces
 for i in range(cols):
     for j in range(row):
         grid[i][j].addNeighbors(grid)
 
-# lock in here
-def run_search_algorithm(start_node, end_node, grid_array):
-    print("Algorithm started. Implement your logic here!")
 
-run_search_algorithm(start, end, grid)
+run_search(start, end, grid, pygame) #changes depending on which file is imported
 
 # Keep Window Open 
 print("Finished. Close the PyGame window to exit.")
